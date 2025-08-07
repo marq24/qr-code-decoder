@@ -11,12 +11,58 @@
         .url-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
         .secret-item { margin: 5px 0; padding: 8px; background: #e8f4fd; border-radius: 3px; font-family: monospace; }
         .secret-item { margin: 5px 0; padding: 8px; background: #e8f4fd; border-radius: 3px; font-family: monospace; }
+        /* GitHub-style header/footer */
+        .gh-header {
+            background: #24292f;
+            color: #fff;
+            padding: 18px 32px;
+            display: flex;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+            margin: -2em -2em 2em -2em;
+        }
+        .gh-header svg {
+            margin-right: 12px;
+        }
+        .gh-header-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .gh-footer {
+            background: #f6f8fa;
+            color: #586069;
+            padding: 16px 32px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            margin: 2em -2em -2em -2em;
+            font-size: 0.95em;
+        }
+        .gh-footer a { color: #0366d6; text-decoration: none; }
+        .gh-footer a:hover { text-decoration: underline; }
+        @keyframes gh-spin {
+            100% { transform: rotate(360deg); }
+        }
+        #spinner svg {
+            display: inline-block;
+            animation: gh-spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
+    <div class="gh-header">
+        <svg height="32" viewBox="0 0 16 16" width="32" aria-hidden="true" fill="#fff"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.1 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.09.16 1.9.08 2.1.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+        <span class="gh-header-title">QR Code Secret Decoder</span>
+    </div>
     <h2>Upload an QR-Code Image<br/><font size="-1">to decode the required OTP-Secret to be used with Home Assistant SENEC Integration</font></h2>
     <div id="info">This webpage will <b>not store</b> any data you upload, it will only decode the QR code and display the results in your browser.</div>
     <input type="file" id="fileInput" accept="image/*">
+    <div id="spinner" style="display:none;text-align:center;margin:2em 0;">
+        <svg width="48" height="48" viewBox="0 0 50 50" style="animation: gh-spin 1s linear infinite;">
+            <circle cx="25" cy="25" r="20" fill="none" stroke="#0366d6" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4"/>
+        </svg>
+        <div style="color:#586069;">Processing QR code...</div>
+    </div>
     <div id="result"></div>
     <div id="secrets"></div>
     <canvas id="canvas" style="display:none;"></canvas>
@@ -178,6 +224,10 @@
         const file = e.target.files[0];
         if (!file) return;
 
+        document.getElementById('spinner').style.display = 'block';
+        document.getElementById('result').textContent = '';
+        document.getElementById('secrets').textContent = '';
+
         const reader = new FileReader();
         reader.onload = function(event) {
             const img = new Image();
@@ -190,6 +240,8 @@
 
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+                document.getElementById('spinner').style.display = 'none';
 
                 if (code) {
                     const qrData = code.data;
@@ -277,5 +329,8 @@
         reader.readAsDataURL(file);
     });
     </script>
+    <div class="gh-footer">
+        <span>Made with <span style="color:#ea4aaa;">&#10084;</span> for the <a href="https://github.com/rlux/ha-senec-v3" target="_blank">ha-senec-v3</a> project. Not affiliated with GitHub.</span>
+    </div>
 </body>
 </html>
