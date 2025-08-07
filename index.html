@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Code Secret Decoder</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        #result { margin-top: 1em; font-weight: bold; }
+        #secrets { margin-top: 1em; font-weight: bold; }
+        #info { margin-top: 2em; margin-bottom: 2em; font-size: 90%; }
+        .url-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+        .secret-item { margin: 5px 0; padding: 8px; background: #e8f4fd; border-radius: 3px; font-family: monospace; }
+        .secret-item { margin: 5px 0; padding: 8px; background: #e8f4fd; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h2>Upload an QR-Code Image<br/><font size="-1">to decode the required OTP-Secret to be used with Home Assistant SENEC Integration</font></h2>
+    <div id="info">This webpage will <b>not store</b> any data you upload, it will only decode the QR code and display the results in your browser.</div>
+    <input type="file" id="fileInput" accept="image/*">
+    <div id="result"></div>
+    <div id="secrets"></div>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script src="jsQR.js"></script>
+    <script>
+    // Base32 encoding function
+    function base32Encode(buffer) {
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+        let bits = 0;
+        let value = 0;
+        let output = '';
+
+        for (let i = 0; i < buffer.length; i++) {
+            value = (value << 8) | buffer[i];
+            bits += 8;
+
+            while (bits >= 5) {
+                output += alphabet[(value >>> (bits - 5)) & 31];
+                bits -= 5;
+            }
+        }
+
+        if (bits > 0) {
+            output += alphabet[(value << (5 - bits)) & 31];
+        }
+
+        return output;
+    }
+
+    // Simple protobuf decoder for otpauth migration
+    function decodeOtpauthMigration(data) {
+        try {
+            const buffer = new Uint8Array(atob(data).split('').map(c => c.charCodeAt(0)));
+            const otpParams = [];
+            let pos = 0;
+
+            while (pos < buffer.length) {
+                const tag = buffer[pos++];
+                const fieldNumber = tag >> 3;
+                const wireType = tag & 7;
+
+                if (fieldNumber === 1 && wireType === 2) { // OTP parameters
+                    const length = buffer[pos++];
+                    const paramData = buffer.slice(pos, pos + length);
+                    pos += length;
+
+                    const param = parseOtpParam(paramData);
+                    if (param) otpParams.push(param);
+                }
+            }
+
+            return otpParams;
+        } catch (e) {
+            console.error('Decode error:', e);
+            return [];
+        }
+    }
+
+    function parseOtpParam(data) {
+        const param = {};
+        let pos = 0;
+
+        while (pos < data.length) {
+            const tag = data[pos++];
+            const fieldNumber = tag >> 3;
+            const wireType = tag & 7;
+
+            if (wireType === 2) { // String/bytes
+                const length = data[pos++];
+                const value = data.slice(pos, pos + length);
+                pos += length;
+
+                switch (fieldNumber) {
+                    case 1: // secret
+                        param.secret = base32Encode(value);
+                        break;
+                    case 2: // name
+                        param.name = new TextDecoder().decode(value);
+                        break;
+                    case 3: // issuer
+                        param.issuer = new TextDecoder().decode(value);
+                        break;
+                }
+            } else if (wireType === 0) { // Varint
+                let value = 0;
+                let shift = 0;
+                while (pos < data.length && (data[pos] & 0x80)) {
+                    value |= (data[pos++] & 0x7f) << shift;
+                    shift += 7;
+                }
+                if (pos < data.length) {
+                    value |= data[pos++] << shift;
+                }
+
+                switch (fieldNumber) {
+                    case 4: // algorithm
+                        param.algorithm = value;
+                        break;
+                    case 5: // digits
+                        param.digits = value;
+                        break;
+                    case 6: // type
+                        param.type = value;
+                        break;
+                }
+            }
+        }
+
+        return param;
+    }
+
+    // Function to parse a regular otpauth URL
+    function parseOtpauthUrl(otpauthUrl) {
+        try {
+            const url = new URL(otpauthUrl);
+            const pathParts = url.pathname.split('/');
+            const name = pathParts.length > 1 ? decodeURIComponent(pathParts[1]) : '';
+
+            const params = new URLSearchParams(url.search);
+
+            return {
+                name: name,
+                issuer: params.get('issuer') || '',
+                secret: params.get('secret') || '',
+                algorithm: params.get('algorithm') || 'SHA1',
+                digits: params.get('digits') || '6',
+                type: url.hostname // 'totp' or 'hotp'
+            };
+        } catch (e) {
+            console.error('Error parsing otpauth URL:', e);
+            return null;
+        }
+    }
+
+    // Function to format secret with spaces every 4 characters
+    function formatSecret(secret) {
+        return secret.replace(/(.{4})/g, '$1 ').trim();
+    }
+
+    function buildOtpauthUrl(param) {
+        const algorithms = { 1: 'SHA1', 2: 'SHA256', 3: 'SHA512', 4: 'MD5' };
+        const types = { 1: 'hotp', 2: 'totp' };
+        const digitCounts = { 1: '6', 2: '8' };
+
+        const type = types[param.type] || 'totp';
+        const name = encodeURIComponent(param.name || '');
+
+        const params = new URLSearchParams();
+        if (param.secret) params.set('secret', param.secret);
+        if (param.issuer) params.set('issuer', param.issuer);
+        if (param.algorithm) params.set('algorithm', algorithms[param.algorithm] || 'SHA1');
+        if (param.digits) params.set('digits', digitCounts[param.digits] || '6');
+
+        return `otpauth://${type}/${name}?${params.toString()}`;
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.getElementById('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+                if (code) {
+                    const qrData = code.data;
+
+                    if (qrData.startsWith('otpauth-migration://')) {
+                        try {
+                            const url = new URL(qrData);
+                            const data = url.searchParams.get('data');
+
+                            if (data) {
+                                const otpParams = decodeOtpauthMigration(data);
+
+                                if (otpParams.length > 0) {
+                                    let html = '<h3>Decoded OTP Information:</h3>';
+                                    let secretsHtml = '<h3>Your OTP-Secrets (that you need to copy into the HA Integration configuration):</h3>';
+
+                                    otpParams.forEach((param, index) => {
+                                        const otpauthUrl = buildOtpauthUrl(param);
+                                        html += `<div class="url-item">
+                                            <strong>Account ${index + 1}:</strong> ${param.name || 'Unknown'}<br>
+                                            <strong>Issuer:</strong> ${param.issuer || 'Unknown'}<br>
+                                            <strong>URL:</strong> <code>${otpauthUrl}</code>
+                                        </div>`;
+
+                                        if (param.secret) {
+                                            const formattedSecret = formatSecret(param.secret);
+                                            secretsHtml += `<div class="secret-item">For '<strong>${param.name || 'Account 1'}</strong>' copy:<br/><br/>${formattedSecret}</div>`;
+                                        }
+                                    });
+
+                                    document.getElementById('result').innerHTML = html;
+                                    document.getElementById('secrets').innerHTML = secretsHtml;
+                                } else {
+                                    document.getElementById('result').textContent = 'No OTP parameters found in migration data.';
+                                    document.getElementById('secrets').textContent = '';
+                                }
+                            } else {
+                                document.getElementById('result').textContent = 'No data parameter found in migration URL.';
+                                document.getElementById('secrets').textContent = '';
+                            }
+                        } catch (err) {
+                            document.getElementById('result').textContent = 'Error decoding migration: ' + err.message;
+                            document.getElementById('secrets').textContent = '';
+                        }
+                    } else if (qrData.startsWith('otpauth://')) {
+                        try {
+                            const param = parseOtpauthUrl(qrData);
+
+                            if (param) {
+                                let html = '<h3>Decoded OTP Information:</h3>';
+                                let secretsHtml = '<h3>Your OTP-Secrets (that you need to copy into the HA Integration configuration):</h3>';
+
+                                html += `<div class="url-item">
+                                    <strong>Account 1:</strong> ${param.name || 'Unknown'}<br>
+                                    <strong>Issuer:</strong> ${param.issuer || 'Unknown'}<br>
+                                    <strong>URL:</strong> <code>${qrData}</code>
+                                </div>`;
+
+                                if (param.secret) {
+                                    const formattedSecret = formatSecret(param.secret);
+                                    secretsHtml += `<div class="secret-item">For '<strong>${param.name || 'Account 1'}</strong>' copy:<br/><br/>${formattedSecret}</div>`;
+                                }
+
+                                document.getElementById('result').innerHTML = html;
+                                document.getElementById('secrets').innerHTML = secretsHtml;
+                            } else {
+                                document.getElementById('result').textContent = 'Error parsing otpauth URL.';
+                                document.getElementById('secrets').textContent = '';
+                            }
+                        } catch (err) {
+                            document.getElementById('result').textContent = 'Error parsing otpauth URL: ' + err.message;
+                            document.getElementById('secrets').textContent = '';
+                        }
+                    } else {
+                        document.getElementById('result').textContent = 'Secret: ' + qrData;
+                        document.getElementById('secrets').textContent = '';
+                    }
+                } else {
+                    document.getElementById('result').textContent = 'No QR code found in the image.';
+                    document.getElementById('secrets').textContent = '';
+                }
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+    </script>
+</body>
+</html>
