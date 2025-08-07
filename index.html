@@ -328,7 +328,24 @@
                     document.getElementById('spinner').style.display = 'none';
                     URL.revokeObjectURL(imageUrl); // Clean up the object URL
                     console.error('QR Decode Error:', error);
-                    document.getElementById('result').textContent = 'No QR code found in the image or error occurred: ' + error.message;
+                    document.getElementById('result').innerHTML = `
+                        <div style="color: #d73a49; background: #ffeaea; padding: 15px; border-radius: 5px; margin: 10px 0; border: 1px solid #f1b9b7;">
+                            <strong>⚠️ QR Code Not Found</strong><br><br>
+                            <strong>Tips for better results:</strong><br>
+                            • Ensure good lighting (avoid shadows and glare)<br>
+                            • Hold camera steady and focus clearly on the QR code<br>
+                            • Get close enough so QR code fills most of the frame<br>
+                            • Make sure QR code is not damaged, blurry, or distorted<br>
+                            • Try taking the photo straight-on (not at an angle)<br>
+                            • Clean your camera lens if it's smudged<br>
+                            • Ensure the QR code has good contrast (dark on light background)<br><br>
+                            <strong>Alternative approaches:</strong><br>
+                            • Try scanning with your phone's camera app first to verify the QR code works<br>
+                            • Take a screenshot if the QR code is displayed on another device<br>
+                            • Use a different camera or phone if available<br>
+                            • Ensure the image file format is supported (JPG, PNG, etc.)
+                        </div>
+                    `;
                     document.getElementById('secrets').textContent = '';
                 });
         };
