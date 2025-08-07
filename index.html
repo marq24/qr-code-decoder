@@ -72,8 +72,11 @@
     <div id="secrets"></div>
     <canvas id="canvas" style="display:none;"></canvas>
 
-    <script src="jsQR.js"></script>
+    <script src="zxing.min.js"></script>
     <script>
+    // Initialize ZXing QR code reader
+    const codeReader = new ZXing.BrowserQRCodeReader();
+
     // Base32 encoding function
     function base32Encode(buffer) {
         const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -233,23 +236,19 @@
         document.getElementById('result').textContent = '';
         document.getElementById('secrets').textContent = '';
 
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.getElementById('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
+        // Create a file URL for the image
+        const imageUrl = URL.createObjectURL(file);
 
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, canvas.width, canvas.height);
+        // Create an image element to load the file
+        const img = new Image();
+        img.onload = function() {
+            // Use ZXing to decode the QR code from the image
+            codeReader.decodeFromImageElement(img)
+                .then(result => {
+                    document.getElementById('spinner').style.display = 'none';
+                    URL.revokeObjectURL(imageUrl); // Clean up the object URL
 
-                document.getElementById('spinner').style.display = 'none';
-
-                if (code) {
-                    const qrData = code.data;
+                    const qrData = result.getText();
 
                     if (qrData.startsWith('otpauth-migration://')) {
                         try {
@@ -324,14 +323,24 @@
                         document.getElementById('result').textContent = 'Secret: ' + qrData;
                         document.getElementById('secrets').textContent = '';
                     }
-                } else {
-                    document.getElementById('result').textContent = 'No QR code found in the image.';
+                })
+                .catch(error => {
+                    document.getElementById('spinner').style.display = 'none';
+                    URL.revokeObjectURL(imageUrl); // Clean up the object URL
+                    console.error('QR Decode Error:', error);
+                    document.getElementById('result').textContent = 'No QR code found in the image or error occurred: ' + error.message;
                     document.getElementById('secrets').textContent = '';
-                }
-            };
-            img.src = event.target.result;
+                });
         };
-        reader.readAsDataURL(file);
+
+        img.onerror = function() {
+            document.getElementById('spinner').style.display = 'none';
+            URL.revokeObjectURL(imageUrl);
+            document.getElementById('result').textContent = 'Error loading image file.';
+            document.getElementById('secrets').textContent = '';
+        };
+
+        img.src = imageUrl;
     });
     </script>
     <div class="gh-footer">
