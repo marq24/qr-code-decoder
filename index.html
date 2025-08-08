@@ -223,6 +223,7 @@
             <div class="spinner" aria-label="Processing QR code"></div>
             <span style="margin-left:8px;color:var(--muted);">Processing QR code...</span>
         </div>
+        <div id="globalMsg" class="alert error hidden" role="alert" style="margin-top:12px;"></div>
     </section>
 
     <section id="parsedSection" class="panel hidden">
@@ -400,6 +401,8 @@
 
     // --- UI helpers for parsed output ---
     function resetOutputs(){ ['rawUri','secretOut','labelOut','issuerOut','accountOut','algoOut','digitsOut','periodOut'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.textContent=''; el.classList.remove('highlight'); } }); const pn=document.getElementById('parseNotice'); pn.textContent=''; pn.classList.add('hidden'); pn.classList.remove('success','error'); const ps=document.getElementById('parsedSection'); if(ps) ps.classList.add('hidden'); }
+    function showGlobalError(msg){ const el=document.getElementById('globalMsg'); if(!el) return; el.textContent=msg; el.classList.remove('hidden'); }
+    function clearGlobalError(){ const el=document.getElementById('globalMsg'); if(!el) return; el.textContent=''; el.classList.add('hidden'); }
     function notice(msg, kind=''){ const el=document.getElementById('parseNotice'); if(!msg){ el.classList.add('hidden'); return;} el.textContent=msg; el.classList.remove('hidden','success','error'); if(kind) el.classList.add(kind); }
     function populate(cfg){
         const rawEl = document.getElementById('rawUri');
@@ -425,7 +428,7 @@
 
     // --- File handling & decode ---
     let processing=false;
-    function handleFile(file){ if(!file || processing) return; processing=true; const fileNameEl=document.getElementById('currentFileName'); if(fileNameEl){ fileNameEl.textContent='File: '+file.name; } const ps=document.getElementById('parsedSection'); if(ps) ps.classList.add('hidden'); const input=document.getElementById('fileInput'); if(input) input.disabled=true; document.getElementById('spinner').classList.remove('hidden'); resetOutputs(); const imageUrl=URL.createObjectURL(file); const img=new Image(); img.onload=function(){ requestAnimationFrame(()=>{ codeReader.decodeFromImageElement(img).then(res=>{ URL.revokeObjectURL(imageUrl); document.getElementById('spinner').classList.add('hidden'); handleQrData(res.getText()); }).catch(err=>{ URL.revokeObjectURL(imageUrl); console.error('QR decode error',err); document.getElementById('spinner').classList.add('hidden'); notice('QR code not found or unreadable.','error'); }).finally(()=>{ processing=false; if(input){ input.disabled=false; input.value=''; } }); }); }; img.onerror=function(){ URL.revokeObjectURL(imageUrl); document.getElementById('spinner').classList.add('hidden'); notice('Error loading image file.','error'); processing=false; if(input){ input.disabled=false; input.value=''; } }; img.src=imageUrl; }
+    function handleFile(file){ if(!file || processing) return; processing=true; clearGlobalError(); const fileNameEl=document.getElementById('currentFileName'); if(fileNameEl){ fileNameEl.textContent='File: '+file.name; } const ps=document.getElementById('parsedSection'); if(ps) ps.classList.add('hidden'); const input=document.getElementById('fileInput'); if(input) input.disabled=true; document.getElementById('spinner').classList.remove('hidden'); resetOutputs(); const imageUrl=URL.createObjectURL(file); const img=new Image(); img.onload=function(){ requestAnimationFrame(()=>{ codeReader.decodeFromImageElement(img).then(res=>{ URL.revokeObjectURL(imageUrl); document.getElementById('spinner').classList.add('hidden'); handleQrData(res.getText()); }).catch(err=>{ URL.revokeObjectURL(imageUrl); console.error('QR decode error',err); document.getElementById('spinner').classList.add('hidden'); showGlobalError('Unable to decode a QR code from the image. Ensure it is a clear, upright QR code (no reflections, blur, heavy cropping) and try again.'); }).finally(()=>{ processing=false; if(input){ input.disabled=false; input.value=''; } }); }); }; img.onerror=function(){ URL.revokeObjectURL(imageUrl); document.getElementById('spinner').classList.add('hidden'); showGlobalError('Image file could not be loaded. Please choose a valid image containing a QR code.'); processing=false; if(input){ input.disabled=false; input.value=''; } }; img.src=imageUrl; }
 
     document.getElementById('fileInput').addEventListener('change', e=> handleFile(e.target.files[0]));
     const drop=document.getElementById('dropZone'); if(drop){ drop.addEventListener('click', ()=> document.getElementById('fileInput').click()); drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); }); drop.addEventListener('dragleave', ()=> drop.classList.remove('dragover')); drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); }); }
