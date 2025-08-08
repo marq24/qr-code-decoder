@@ -202,6 +202,11 @@
         @media (max-width:700px){ .kv { grid-template-columns:100px 1fr auto; } }
         .inline-btn { font-size:11px; padding:2px 8px; line-height:1.2; margin-left:6px; }
         /* Secret & URI highlight style (applied dynamically) */
+        .meta-rows { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+        .meta-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .pair { display:flex; flex-direction:column; gap:4px; }
+        .pair label { font-weight:600; font-size:13px; }
+        @media (max-width:700px){ .meta-row { grid-template-columns:1fr; } }
     </style>
 </head>
 <body>
@@ -224,12 +229,20 @@
         <h2>Parsed OTP URI</h2>
         <div class="kv"><label>Raw URI</label><div id="rawUri" class="output-box"></div><button class="secondary inline-btn" data-copy="rawUri">Copy</button></div>
         <div class="kv"><label>Secret (Base32)</label><div id="secretOut" class="output-box"></div><button class="secondary inline-btn" data-copy="secretOut">Copy</button></div>
-        <div class="kv"><label>Label</label><div id="labelOut" class="output-box"></div><button class="secondary inline-btn hidden" data-copy="labelOut">Copy</button></div>
-        <div class="kv"><label>Issuer</label><div id="issuerOut" class="output-box"></div><button class="secondary inline-btn hidden" data-copy="issuerOut">Copy</button></div>
-        <div class="kv"><label>Account</label><div id="accountOut" class="output-box"></div><button class="secondary inline-btn hidden" data-copy="accountOut">Copy</button></div>
-        <div class="kv"><label>Algorithm</label><div id="algoOut" class="output-box"></div><span></span></div>
-        <div class="kv"><label>Digits</label><div id="digitsOut" class="output-box"></div><span></span></div>
-        <div class="kv"><label>Period (s)</label><div id="periodOut" class="output-box"></div><span></span></div>
+        <div class="meta-rows">
+            <div class="meta-row">
+                <div class="pair"><label>Issuer</label><div id="issuerOut" class="output-box"></div></div>
+                <div class="pair"><label>Label</label><div id="labelOut" class="output-box"></div></div>
+            </div>
+            <div class="meta-row">
+                <div class="pair"><label>Algorithm</label><div id="algoOut" class="output-box"></div></div>
+                <div class="pair"><label>Account</label><div id="accountOut" class="output-box"></div></div>
+            </div>
+            <div class="meta-row">
+                <div class="pair"><label>Digits</label><div id="digitsOut" class="output-box"></div></div>
+                <div class="pair"><label>Period (s)</label><div id="periodOut" class="output-box"></div></div>
+            </div>
+        </div>
         <div id="parseNotice" class="alert hidden" style="margin-top:12px;"></div>
     </section>
 
