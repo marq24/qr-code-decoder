@@ -3,38 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <title>QR Code Secret Decoder</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        body { font-family: Arial, sans-serif; margin: 2em; }
-        #result { margin-top: 1em; font-weight: bold; }
-        #secrets { margin-top: 1em; font-weight: bold; }
-        #info { margin-top: 2em; margin-bottom: 2em; font-size: 90%; }
-        .url-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
-        .secret-item { margin: 5px 0; padding: 8px; background: #e8f4fd; border-radius: 3px; font-family: monospace; }
-        .secret-item { margin: 5px 0; padding: 8px; background: #e8f4fd; border-radius: 3px; font-family: monospace; }
-        /* GitHub-style header/footer */
-        .gh-header {
-            background: #24292f;
-            color: #fff;
-            padding: 18px 32px;
-            display: flex;
-            align-items: center;
-            border-radius: 8px 8px 0 0;
-            margin: -2em -2em 2em -2em;
+        :root {
+            --bg: #f6f8fa;
+            --panel: #ffffff;
+            --border: #d0d7de;
+            --text: #24292f;
+            --accent: #0969da;
+            --danger:#cf222e;
+            --muted:#57606a;
+            --code-bg:#f3f4f6;
+            --radius:6px;
+            --mono: ui-monospace,SFMono-Regular,SF Mono,Menlo,Consolas,Liberation Mono,monospace;
+            --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
         }
-        .gh-header svg {
-            margin-right: 12px;
+        * { box-sizing: border-box; }
+        body {
+            margin:0;
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height:1.5;
         }
-        .gh-header-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            letter-spacing: 1px;
+        header {
+            background:#24292f;
+            color:#fff;
+            padding:12px 24px;
+            font-size:18px;
+            font-weight:600;
+            position:sticky; /* keep header visible */
+            top:0;
+            z-index:150; /* above panels & footer */
+        }
+        main { max-width:1000px; margin:24px auto 48px; padding:0 16px; padding-bottom:80px; }
+        h1 { font-size:24px; margin:0 0 12px; }
+        h2 { font-size:20px; margin:0 0 16px; }
+        section.panel {
+            background:var(--panel);
+            border:1px solid var(--border);
+            border-radius: var(--radius);
+            padding:16px 20px;
+            margin-bottom:20px;
+        }
+        .panel h2 {
+            font-size:18px;
+            margin:0 0 12px;
+            font-weight:600;
+        }
+        .flex { display:flex; gap:16px; flex-wrap:wrap; }
+        button, .btn {
+            background: var(--accent);
+            border:1px solid var(--accent);
+            color:#fff;
+            padding:6px 14px;
+            font-size:14px;
+            line-height:1.4;
+            border-radius:6px;
+            cursor:pointer;
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+        }
+        button.secondary {
+            background:#f6f8fa;
+            color:var(--text);
+            border-color:var(--border);
+        }
+        button.danger {
+            background:var(--danger);
+            border-color:var(--danger);
+        }
+        button:disabled { opacity:.55; cursor:not-allowed; }
+        input[type=file] {
+            font-size:14px;
+            margin-bottom:10px;
+        }
+        .badge {
+            display:inline-block;
+            background:#ddf4ff;
+            color:#0969da;
+            font-size:12px;
+            padding:2px 8px;
+            border:1px solid #54aeff;
+            border-radius:2em;
+            font-weight:500;
+            vertical-align:middle;
+        }
+        code, pre {
+            font-family: var(--mono);
+            font-size:13px;
+        }
+        pre {
+            background:var(--code-bg);
+            padding:10px 12px;
+            border-radius:6px;
+            overflow:auto;
+            border:1px solid #d0d7de;
+            margin:0;
+        }
+        .output-box {
+            background:#fff;
+            border:1px solid var(--border);
+            border-radius:6px;
+            padding:12px;
+            font-family:var(--mono);
+            font-size:13px;
+            word-break:break-all;
+        }
+        .output-box.highlight { background:#e8f4fd; border-color:#54aeff; font-weight:600; font-size:14px; }
+        .muted { color:var(--muted); font-size:13px; }
+        .alert {
+            padding:10px 12px;
+            border-radius:6px;
+            margin:8px 0;
+            border:1px solid var(--border);
+        }
+        .alert.success {
+            background:#d1f4dd;
+            border-color:#82e299;
+            color:#1a7f37;
+        }
+        .alert.error {
+            background:#ffeaea;
+            border-color:#f1b9b7;
+            color:#d73a49;
+        }
+        hr {
+            border:0;
+            border-top:1px solid var(--border);
+            margin:24px 0;
+        }
+        footer {
+            text-align:center;
+            font-size:12px;
+            color:var(--muted);
+            padding:32px 0 16px;
         }
         .gh-footer {
             background: #f6f8fa;
             color: #586069;
             padding: 16px 32px;
             text-align: center;
-            border-radius: 0 0 8px 8px;
             font-size: 0.95em;
             position: fixed;
             left: 0;
@@ -42,34 +152,99 @@
             width: 100vw;
             z-index: 100;
             margin: 0;
+            box-sizing: border-box;
+            border-top:1px solid var(--border);
         }
-        .gh-footer a { color: #0366d6; text-decoration: none; }
-        .gh-footer a:hover { text-decoration: underline; }
-        @keyframes gh-spin {
-            100% { transform: rotate(360deg); }
+        .gh-footer a { 
+            color: #0366d6; 
+            text-decoration: none; 
         }
-        #spinner svg {
-            display: inline-block;
-            animation: gh-spin 1s linear infinite;
+        .gh-footer a:hover { 
+            text-decoration: underline; 
         }
+        /* Spinner */
+        .spinner {
+            display:inline-block;
+            width:18px; height:18px;
+            border:3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius:50%;
+            animation: spin .7s linear infinite;
+            vertical-align:middle;
+            margin-left:8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hidden { display:none !important; }
+        @media (max-width:700px){
+            main { padding: 0 12px; }
+        }
+        /* Added drag & drop styles */
+        .drop-zone {
+            border:2px dashed var(--border);
+            border-radius:8px;
+            padding:20px;
+            text-align:center;
+            font-size:14px;
+            color:var(--muted);
+            background:#ffffff;
+            transition:.15s border-color, .15s background, .15s color;
+            cursor:pointer;
+            margin-top:10px;
+        }
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background:#e7f3ff;
+            color: var(--accent);
+        }
+        /* New key/value layout & copy buttons */
+        .kv { display:grid; grid-template-columns:140px 1fr auto; gap:4px 12px; font-size:14px; align-items:center; margin-bottom:4px; }
+        .kv label { font-weight:600; }
+        @media (max-width:700px){ .kv { grid-template-columns:100px 1fr auto; } }
+        .inline-btn { font-size:11px; padding:2px 8px; line-height:1.2; margin-left:6px; }
+        /* Secret & URI highlight style (applied dynamically) */
     </style>
 </head>
 <body>
-    <div class="gh-header">
-        <svg height="32" viewBox="0 0 16 16" width="32" aria-hidden="true" fill="#fff"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.1 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.09.16 1.9.08 2.1.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
-        <span class="gh-header-title">QR Code Secret Decoder</span>
-    </div>
-    <h2>Upload an QR-Code Image<br/><font size="-1">to decode the required OTP-Secret to be used with Home Assistant SENEC Integration</font></h2>
-    <div id="info">This webpage will <b>not store</b> any data you upload, it will only decode the QR code and display the results in your browser.</div>
-    <input type="file" id="fileInput" accept="image/*">
-    <div id="spinner" style="display:none;text-align:center;margin:2em 0;">
-        <svg width="48" height="48" viewBox="0 0 50 50" style="animation: gh-spin 1s linear infinite;">
-            <circle cx="25" cy="25" r="20" fill="none" stroke="#0366d6" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4"/>
-        </svg>
-        <div style="color:#586069;">Processing QR code...</div>
-    </div>
-    <div id="result"></div>
-    <div id="secrets"></div>
+<header>QR Code Secret Decoder</header>
+<main>
+    <section class="panel">
+        <h2>Upload QR Code Image</h2>
+        <div class="muted" style="margin-bottom:16px;">Upload or drop an image file to decode the required OTP-Secret to be used with Home Assistant SENEC Integration</div>
+        <input type="file" id="fileInput" accept="image/*">
+        <div id="currentFileName" class="muted" style="margin:4px 0 8px;font-size:12px;"></div>
+        <div id="dropZone" class="drop-zone">Click or Drop QR Code Image Here</div>
+        <div class="muted">This webpage will <b>not store</b> any data you upload, it will only decode the QR code and display the results in your browser.</div>
+        <div id="spinner" style="text-align:center;margin:16px 0;" class="hidden">
+            <div class="spinner" aria-label="Processing QR code"></div>
+            <span style="margin-left:8px;color:var(--muted);">Processing QR code...</span>
+        </div>
+    </section>
+
+    <section id="parsedSection" class="panel hidden">
+        <h2>Parsed OTP URI</h2>
+        <div class="kv"><label>Raw URI</label><div id="rawUri" class="output-box"></div><button class="secondary inline-btn" data-copy="rawUri">Copy</button></div>
+        <div class="kv"><label>Secret (Base32)</label><div id="secretOut" class="output-box"></div><button class="secondary inline-btn" data-copy="secretOut">Copy</button></div>
+        <div class="kv"><label>Label</label><div id="labelOut" class="output-box"></div><button class="secondary inline-btn hidden" data-copy="labelOut">Copy</button></div>
+        <div class="kv"><label>Issuer</label><div id="issuerOut" class="output-box"></div><button class="secondary inline-btn hidden" data-copy="issuerOut">Copy</button></div>
+        <div class="kv"><label>Account</label><div id="accountOut" class="output-box"></div><button class="secondary inline-btn hidden" data-copy="accountOut">Copy</button></div>
+        <div class="kv"><label>Algorithm</label><div id="algoOut" class="output-box"></div><span></span></div>
+        <div class="kv"><label>Digits</label><div id="digitsOut" class="output-box"></div><span></span></div>
+        <div class="kv"><label>Period (s)</label><div id="periodOut" class="output-box"></div><span></span></div>
+        <div id="parseNotice" class="alert hidden" style="margin-top:12px;"></div>
+    </section>
+
+    <section class="panel">
+        <h2>How it works</h2>
+        <p>This page uses the <code>ZXing</code> library for reliable QR code decoding from uploaded image files. It supports standard <code>otpauth://</code> provisioning URIs as well as Google Authenticator export QR codes (<code>otpauth-migration://</code>). Migration QR codes are decoded and the first contained account is shown.</p>
+        <p>The decoder extracts and displays the label, issuer, account name, Base32 secret, algorithm, digits, and period so you can re‑enter them elsewhere.</p>
+        <p><strong>Privacy:</strong> All decoding and parsing happen locally in your browser; no data is sent anywhere.</p>
+    </section>
+
+    <footer>
+        For personal backup/recovery of your own 2FA only.
+    </footer>
+</main>
+
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script src="zxing.min.js"></script>
@@ -196,8 +371,9 @@
                 name: name,
                 issuer: params.get('issuer') || '',
                 secret: params.get('secret') || '',
-                algorithm: params.get('algorithm') || 'SHA1',
+                algorithm: (params.get('algorithm') || 'SHA1').toUpperCase(),
                 digits: params.get('digits') || '6',
+                period: params.get('period') || '30',
                 type: url.hostname // 'totp' or 'hotp'
             };
         } catch (e) {
@@ -207,161 +383,45 @@
     }
 
     // Function to format secret with spaces every 4 characters
-    function formatSecret(secret) {
-        return secret.replace(/(.{4})/g, '$1 ').trim();
-    }
+    function formatSecret(secret) { return (secret||'').replace(/\s+/g,'').toUpperCase().replace(/(.{4})/g,'$1 ').trim(); }
 
-    function buildOtpauthUrl(param) {
-        const algorithms = { 1: 'SHA1', 2: 'SHA256', 3: 'SHA512', 4: 'MD5' };
-        const types = { 1: 'hotp', 2: 'totp' };
-        const digitCounts = { 1: '6', 2: '8' };
+    // --- UI helpers for parsed output ---
+    function resetOutputs(){ ['rawUri','secretOut','labelOut','issuerOut','accountOut','algoOut','digitsOut','periodOut'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.textContent=''; el.classList.remove('highlight'); } }); const pn=document.getElementById('parseNotice'); pn.textContent=''; pn.classList.add('hidden'); pn.classList.remove('success','error'); const ps=document.getElementById('parsedSection'); if(ps) ps.classList.add('hidden'); }
+    function notice(msg, kind=''){ const el=document.getElementById('parseNotice'); if(!msg){ el.classList.add('hidden'); return;} el.textContent=msg; el.classList.remove('hidden','success','error'); if(kind) el.classList.add(kind); }
+    function populate(cfg){
+        const rawEl = document.getElementById('rawUri');
+        const secretEl = document.getElementById('secretOut');
+        const formattedSecret = formatSecret(cfg.secret||'');
+        rawEl.classList.remove('highlight');
+        secretEl.classList.remove('highlight');
+        rawEl.textContent = cfg.uri || '';
+        secretEl.textContent = formattedSecret;
+        document.getElementById('labelOut').textContent=cfg.label||'';
+        document.getElementById('issuerOut').textContent=cfg.issuer||'';
+        document.getElementById('accountOut').textContent=cfg.account||'';
+        document.getElementById('algoOut').textContent=cfg.algo||'';
+        document.getElementById('digitsOut').textContent=cfg.digits||'';
+        document.getElementById('periodOut').textContent=cfg.period||'';
+        if(rawEl.textContent.trim()) rawEl.classList.add('highlight');
+        if(secretEl.textContent.trim()) secretEl.classList.add('highlight');
+        const ps=document.getElementById('parsedSection'); if(ps) ps.classList.remove('hidden');
+        notice('OTP parsed successfully.','success'); }
 
-        const type = types[param.type] || 'totp';
-        const name = encodeURIComponent(param.name || '');
+    function handleQrData(qr){ resetOutputs(); if(qr.startsWith('otpauth-migration://')){ try { const url=new URL(qr); const data=url.searchParams.get('data'); if(!data){ notice('Migration URL missing data parameter','error'); return; } const params=decodeOtpauthMigration(data); if(!params.length){ notice('No OTP entries in migration data','error'); return; } const first=params[0]; const algoMap={1:'SHA1',2:'SHA256',3:'SHA512',4:'MD5'}; const digitsMap={1:'6',2:'8'}; const types={1:'hotp',2:'totp'}; const algo=algoMap[first.algorithm]||'SHA1'; const digits=digitsMap[first.digits]||'6'; const type=types[first.type]||'totp'; const label=first.name||''; const issuer=first.issuer||''; const account= label.includes(':') ? label.split(':').slice(1).join(':').trim():''; const raw=`otpauth://${type}/${encodeURIComponent(label)}?secret=${(first.secret||'').replace(/\s+/g,'').toUpperCase()}${issuer?`&issuer=${encodeURIComponent(issuer)}`:''}&algorithm=${algo}&digits=${digits}`; populate({ uri:raw, secret:first.secret||'', label, issuer, account, algo, digits, period:30 }); } catch(e){ notice('Migration decode error: '+e.message,'error'); } return; } if(qr.startsWith('otpauth://')){ const parsed=parseOtpauthUrl(qr); if(!parsed){ notice('Unable to parse otpauth URI','error'); return; } const label=parsed.name||''; const issuer=parsed.issuer||''; const account= label.includes(':') ? label.split(':').slice(1).join(':').trim():''; populate({ uri:qr, secret:parsed.secret||'', label, issuer, account, algo:parsed.algorithm||'SHA1', digits:parsed.digits||'6', period:parsed.period||'30' }); return; } // fallback plain secret
+        populate({ uri:'', secret:qr, label:'', issuer:'', account:'', algo:'', digits:'', period:'' }); notice('Not an OTP URI. Showing raw content.','error'); }
 
-        const params = new URLSearchParams();
-        if (param.secret) params.set('secret', param.secret);
-        if (param.issuer) params.set('issuer', param.issuer);
-        if (param.algorithm) params.set('algorithm', algorithms[param.algorithm] || 'SHA1');
-        if (param.digits) params.set('digits', digitCounts[param.digits] || '6');
+    // --- File handling & decode ---
+    let processing=false;
+    function handleFile(file){ if(!file || processing) return; processing=true; const fileNameEl=document.getElementById('currentFileName'); if(fileNameEl){ fileNameEl.textContent='File: '+file.name; } const ps=document.getElementById('parsedSection'); if(ps) ps.classList.add('hidden'); const input=document.getElementById('fileInput'); if(input) input.disabled=true; document.getElementById('spinner').classList.remove('hidden'); resetOutputs(); const imageUrl=URL.createObjectURL(file); const img=new Image(); img.onload=function(){ requestAnimationFrame(()=>{ codeReader.decodeFromImageElement(img).then(res=>{ URL.revokeObjectURL(imageUrl); document.getElementById('spinner').classList.add('hidden'); handleQrData(res.getText()); }).catch(err=>{ URL.revokeObjectURL(imageUrl); console.error('QR decode error',err); document.getElementById('spinner').classList.add('hidden'); notice('QR code not found or unreadable.','error'); }).finally(()=>{ processing=false; if(input){ input.disabled=false; input.value=''; } }); }); }; img.onerror=function(){ URL.revokeObjectURL(imageUrl); document.getElementById('spinner').classList.add('hidden'); notice('Error loading image file.','error'); processing=false; if(input){ input.disabled=false; input.value=''; } }; img.src=imageUrl; }
 
-        return `otpauth://${type}/${name}?${params.toString()}`;
-    }
+    document.getElementById('fileInput').addEventListener('change', e=> handleFile(e.target.files[0]));
+    const drop=document.getElementById('dropZone'); if(drop){ drop.addEventListener('click', ()=> document.getElementById('fileInput').click()); drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('dragover'); }); drop.addEventListener('dragleave', ()=> drop.classList.remove('dragover')); drop.addEventListener('drop', e=>{ e.preventDefault(); drop.classList.remove('dragover'); if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); }); }
 
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        document.getElementById('spinner').style.display = 'block';
-        document.getElementById('result').textContent = '';
-        document.getElementById('secrets').textContent = '';
-
-        // Create a file URL for the image
-        const imageUrl = URL.createObjectURL(file);
-
-        // Create an image element to load the file
-        const img = new Image();
-        img.onload = function() {
-            // Use ZXing to decode the QR code from the image
-            codeReader.decodeFromImageElement(img)
-                .then(result => {
-                    document.getElementById('spinner').style.display = 'none';
-                    URL.revokeObjectURL(imageUrl); // Clean up the object URL
-
-                    const qrData = result.getText();
-
-                    if (qrData.startsWith('otpauth-migration://')) {
-                        try {
-                            const url = new URL(qrData);
-                            const data = url.searchParams.get('data');
-
-                            if (data) {
-                                const otpParams = decodeOtpauthMigration(data);
-
-                                if (otpParams.length > 0) {
-                                    let html = '<h3>Decoded OTP Information:</h3>';
-                                    let secretsHtml = '<h3>Your OTP-Secrets (that you need to copy into the HA Integration configuration):</h3>';
-
-                                    otpParams.forEach((param, index) => {
-                                        const otpauthUrl = buildOtpauthUrl(param);
-                                        html += `<div class="url-item">
-                                            <strong>Account ${index + 1}:</strong> ${param.name || 'Unknown'}<br>
-                                            <strong>Issuer:</strong> ${param.issuer || 'Unknown'}<br>
-                                            <strong>URL:</strong> <code>${otpauthUrl}</code>
-                                        </div>`;
-
-                                        if (param.secret) {
-                                            const formattedSecret = formatSecret(param.secret);
-                                            secretsHtml += `<div class="secret-item">For '<strong>${param.name || 'Account 1'}</strong>' copy:<br/><br/>${formattedSecret}</div>`;
-                                        }
-                                    });
-
-                                    document.getElementById('result').innerHTML = html;
-                                    document.getElementById('secrets').innerHTML = secretsHtml;
-                                } else {
-                                    document.getElementById('result').textContent = 'No OTP parameters found in migration data.';
-                                    document.getElementById('secrets').textContent = '';
-                                }
-                            } else {
-                                document.getElementById('result').textContent = 'No data parameter found in migration URL.';
-                                document.getElementById('secrets').textContent = '';
-                            }
-                        } catch (err) {
-                            document.getElementById('result').textContent = 'Error decoding migration: ' + err.message;
-                            document.getElementById('secrets').textContent = '';
-                        }
-                    } else if (qrData.startsWith('otpauth://')) {
-                        try {
-                            const param = parseOtpauthUrl(qrData);
-
-                            if (param) {
-                                let html = '<h3>Decoded OTP Information:</h3>';
-                                let secretsHtml = '<h3>Your OTP-Secrets (that you need to copy into the HA Integration configuration):</h3>';
-
-                                html += `<div class="url-item">
-                                    <strong>Account 1:</strong> ${param.name || 'Unknown'}<br>
-                                    <strong>Issuer:</strong> ${param.issuer || 'Unknown'}<br>
-                                    <strong>URL:</strong> <code>${qrData}</code>
-                                </div>`;
-
-                                if (param.secret) {
-                                    const formattedSecret = formatSecret(param.secret);
-                                    secretsHtml += `<div class="secret-item">For '<strong>${param.name || 'Account 1'}</strong>' copy:<br/><br/>${formattedSecret}</div>`;
-                                }
-
-                                document.getElementById('result').innerHTML = html;
-                                document.getElementById('secrets').innerHTML = secretsHtml;
-                            } else {
-                                document.getElementById('result').textContent = 'Error parsing otpauth URL.';
-                                document.getElementById('secrets').textContent = '';
-                            }
-                        } catch (err) {
-                            document.getElementById('result').textContent = 'Error parsing otpauth URL: ' + err.message;
-                            document.getElementById('secrets').textContent = '';
-                        }
-                    } else {
-                        document.getElementById('result').textContent = 'Secret: ' + qrData;
-                        document.getElementById('secrets').textContent = '';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('spinner').style.display = 'none';
-                    URL.revokeObjectURL(imageUrl); // Clean up the object URL
-                    console.error('QR Decode Error:', error);
-                    document.getElementById('result').innerHTML = `
-                        <div style="color: #d73a49; background: #ffeaea; padding: 15px; border-radius: 5px; margin: 10px 0; border: 1px solid #f1b9b7;">
-                            <strong>⚠️ QR Code Not Found</strong><br><br>
-                            <strong>Tips for better results:</strong><br>
-                            • Ensure good lighting (avoid shadows and glare)<br>
-                            • Hold camera steady and focus clearly on the QR code<br>
-                            • Get close enough so QR code fills most of the frame<br>
-                            • Make sure QR code is not damaged, blurry, or distorted<br>
-                            • Try taking the photo straight-on (not at an angle)<br>
-                            • Clean your camera lens if it's smudged<br>
-                            • Ensure the QR code has good contrast (dark on light background)<br><br>
-                            <strong>Alternative approaches:</strong><br>
-                            • Try scanning with your phone's camera app first to verify the QR code works<br>
-                            • Take a screenshot if the QR code is displayed on another device<br>
-                            • Use a different camera or phone if available<br>
-                            • Ensure the image file format is supported (JPG, PNG, etc.)
-                        </div>
-                    `;
-                    document.getElementById('secrets').textContent = '';
-                });
-        };
-
-        img.onerror = function() {
-            document.getElementById('spinner').style.display = 'none';
-            URL.revokeObjectURL(imageUrl);
-            document.getElementById('result').textContent = 'Error loading image file.';
-            document.getElementById('secrets').textContent = '';
-        };
-
-        img.src = imageUrl;
-    });
+    // Copy buttons (URI & secret main focus, others hidden but supported)
+    document.addEventListener('click', e=>{ const btn=e.target.closest('[data-copy]'); if(!btn) return; const id=btn.getAttribute('data-copy'); const el=document.getElementById(id); if(!el || !el.textContent) return; navigator.clipboard.writeText(el.textContent.trim()).then(()=>{ const orig=btn.textContent; btn.textContent='Copied'; btn.disabled=true; setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 1200); }); });
     </script>
     <div class="gh-footer">
-        <span>Made with <span style="color:#ea4aaa;">&#10084;</span> for the <a href="https://github.com/marq24/ha-senec-v3/blob/master/docs/SENEC_OTP_SETUP.md" target="_blank">ha-senec-v3</a> project. Not affiliated with GitHub.</span>
+        <span>Made with <span style="color:#ea4aaa;">&#10084;</span> for the <a href="https://github.com/marq24/ha-senec-v3/blob/master/docs/SENEC_OTP_SETUP.md" target="_blank">ha-senec-v3</a> project. Not affiliated with GitHub and/or SENEC.</span>
     </div>
 </body>
 </html>
