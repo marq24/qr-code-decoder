@@ -439,7 +439,7 @@
     document.addEventListener('click', e=>{ const btn=e.target.closest('[data-copy]'); if(!btn) return; const id=btn.getAttribute('data-copy'); const el=document.getElementById(id); if(!el || !el.textContent) return; navigator.clipboard.writeText(el.textContent.trim()).then(()=>{ const orig=btn.textContent; btn.textContent='Copied'; btn.disabled=true; setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 1200); }); });
     </script>
     <div class="gh-footer">
-        <span>Made with <span style="color:#ea4aaa;">&#10084;</span> for the <a href="https://github.com/marq24/ha-senec-v3/blob/master/docs/SENEC_OTP_SETUP.md" target="_blank">ha-senec-v3</a> project. Not affiliated with GitHub and/or SENEC.</span>
+        <span>Made with <span style="color:#ea4aaa;">&#10084;</span> for the <a href="https://github.com/marq24/ha-senec-v3/blob/main/docs/SENEC_OTP_SETUP.md" target="_blank">ha-senec-v3</a> project. Not affiliated with GitHub and/or SENEC.</span>
     </div>
 </body>
 </html>
